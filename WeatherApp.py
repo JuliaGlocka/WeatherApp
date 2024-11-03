@@ -2,6 +2,25 @@ import requests
 from tabulate import tabulate
 from datetime import datetime, timedelta
 
+# Zdefiniowane strefy czasowe i ich przesunięcia UTC
+TIME_ZONES = {
+    "America/Anchorage": "-9",         # UTC-09:00, w czasie letnim UTC-08:00
+    "America/Los_Angeles": "-8",       # UTC-08:00, w czasie letnim UTC-07:00
+    "America/Denver": "-7",             # UTC-07:00, w czasie letnim UTC-06:00
+    "America/Chicago": "-6",            # UTC-06:00, w czasie letnim UTC-05:00
+    "America/New_York": "-5",           # UTC-05:00, w czasie letnim UTC-04:00
+    "America/Sao_Paulo": "-3",          # UTC-03:00, czas standardowy
+    "Europe/London": "0",                # UTC+00:00, w czasie letnim UTC+01:00
+    "Europe/Berlin": "+1",              # UTC+01:00, w czasie letnim UTC+02:00
+    "Europe/Moscow": "+3",              # UTC+03:00, czas standardowy
+    "Africa/Cairo": "+2",               # UTC+02:00, czas standardowy
+    "Asia/Bangkok": "+7",               # UTC+07:00, czas standardowy
+    "Asia/Singapore": "+8",              # UTC+08:00, czas standardowy
+    "Asia/Tokyo": "+9",                 # UTC+09:00, czas standardowy
+    "Australia/Sydney": "+11",           # UTC+11:00, w czasie letnim UTC+10:00
+    "Pacific/Auckland": "+13"            # UTC+13:00, w czasie letnim UTC+12:00
+}
+
 # URL i nagłówki
 BASE_URL = "https://api.open-meteo.com/v1/forecast"
 HOURLY_PARAMETERS = "temperature_2m,apparent_temperature,rain,snowfall"
@@ -64,19 +83,16 @@ def main():
                     print("Niepoprawny format. Wprowadź liczbę.")
 
             # Pobranie strefy czasowej
-            valid_timezones = [
-                "America/Anchorage", "America/Los_Angeles", "America/Denver",
-                "America/Chicago", "America/New_York", "America/Sao_Paulo",
-                "Europe/London", "Europe/Berlin", "Europe/Moscow",
-                "Africa/Cairo", "Asia/Bangkok", "Asia/Singapore",
-                "Asia/Tokyo", "Australia/Sydney", "Pacific/Auckland"
-            ]
+            print("Dostępne strefy czasowe (czas standardowy):")
+            print(tabulate(TIME_ZONES.items(), headers=["Time Zone", "UTC Offset"], tablefmt="grid"))
+
             while True:
-                timezone = input("Wpisz jedną ze stref czasowych:\n" + "\n".join(valid_timezones) + "\n")
-                if timezone in valid_timezones:
+                offset = input("Wpisz przesunięcie UTC dostępne w tabeli (np. -3, 0, +3): ")
+                if offset in TIME_ZONES.values():
+                    timezone = get_timezone_by_offset(offset)
                     break
                 else:
-                    print("Niepoprawna strefa czasowa. Spróbuj ponownie.")
+                    print("Niepoprawne przesunięcie UTC. Spróbuj ponownie.")
 
             # Pobranie daty w zakresie tygodnia
             today = datetime.now().date()
@@ -119,6 +135,13 @@ def main():
             break
         else:
             print("Nieprawidłowy wybór. Wpisz 1 lub 0.")
+
+def get_timezone_by_offset(offset):
+    """Zwraca strefę czasową na podstawie przesunięcia UTC."""
+    for timezone, utc in TIME_ZONES.items():
+        if utc == offset:
+            return timezone
+    return None
 
 if __name__ == "__main__":
     main()
