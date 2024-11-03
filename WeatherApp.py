@@ -1,16 +1,15 @@
 import requests
 from tabulate import tabulate
+from datetime import datetime, timedelta
 
 # URL i nagłówki
 BASE_URL = "https://api.open-meteo.com/v1/forecast"
-HOURLY_PARAMETERS = "temperature_2m,apparent_temperature,rain,snowfall,visibility"
+HOURLY_PARAMETERS = "temperature_2m,apparent_temperature,rain,snowfall"
 
-
-def get_weather_data(latitude, longitude, timezone, forecast_days):
+def get_weather_data(latitude, longitude, timezone, date):
     # Konstrukcja URL z parametrami
-    url = f"{BASE_URL}?latitude={latitude}&longitude={longitude}&hourly={HOURLY_PARAMETERS}&timezone={timezone}&forecast_days={forecast_days}"
+    url = f"{BASE_URL}?latitude={latitude}&longitude={longitude}&hourly={HOURLY_PARAMETERS}&timezone={timezone}&start_date={date}&end_date={date}"
     return url
-
 
 def fetch_weather_data(url):
     try:
@@ -22,39 +21,37 @@ def fetch_weather_data(url):
         print("Błąd podczas próby wykonania zapytania GET:", e)
         return None
 
-
-def format_response(response_data):
+def format_response(response_data, selected_hour):
     # Wybierz interesujące dane z odpowiedzi
     hourly_data = response_data.get("hourly", {})
     times = hourly_data.get("time", [])
     temperatures = hourly_data.get("temperature_2m", [])
     apparent_temps = hourly_data.get("apparent_temperature", [])
-    visibilities = hourly_data.get("visibility", [])
     rain = hourly_data.get("rain", [])
     snowfall = hourly_data.get("snowfall", [])
 
-    # Przygotuj dane do tabeli
+    # Przygotuj dane do tabeli tylko dla wybranej godziny
     table = []
     for i in range(len(times)):
-        row = [times[i], temperatures[i], apparent_temps[i], visibilities[i], rain[i], snowfall[i]]
-        table.append(row)
+        # Sprawdź, czy godzina odpowiada wybranej przez użytkownika
+        if selected_hour in times[i]:
+            row = [times[i], temperatures[i], apparent_temps[i], rain[i], snowfall[i]]
+            table.append(row)
 
     # Drukowanie tabeli za pomocą `tabulate`
-    headers = ["Czas", "Temperatura (°C)", "Odczuwalna Temp. (°C)", "Widoczność (m)", "Opady deszczu (mm)",
-               "Opady śniegu (cm)"]
+    headers = ["Czas", "Temperatura (°C)", "Odczuwalna Temp. (°C)", "Opady deszczu (mm)", "Opady śniegu (cm)"]
     print(tabulate(table, headers=headers, tablefmt="grid"))
-
 
 def main():
     while True:
-        user_input = input("Wpisz 1, aby zobaczyć dane na temat dzisiejszej pogody, lub 0, aby zakończyć program: ")
+        user_input = input("Wpisz 1, aby zobaczyć dane na temat pogody, lub 0, aby zakończyć program: ")
 
         if user_input == '1':
             # Pobranie szerokości geograficznej
             while True:
                 try:
                     latitude = float(input("Wpisz szerokość geograficzną (latitude): "))
-                    break  # Wyjdź z pętli, jeśli wartość jest poprawna
+                    break
                 except ValueError:
                     print("Niepoprawny format. Wprowadź liczbę.")
 
@@ -62,7 +59,7 @@ def main():
             while True:
                 try:
                     longitude = float(input("Wpisz długość geograficzną (longitude): "))
-                    break  # Wyjdź z pętli, jeśli wartość jest poprawna
+                    break
                 except ValueError:
                     print("Niepoprawny format. Wprowadź liczbę.")
 
@@ -81,37 +78,47 @@ def main():
                 else:
                     print("Niepoprawna strefa czasowa. Spróbuj ponownie.")
 
-            # Pobranie liczby dni prognozy
+            # Pobranie daty w zakresie tygodnia
+            today = datetime.now().date()
+            week_later = today + timedelta(days=7)
             while True:
+                date_input = input(f"Wpisz datę (RRRR-MM-DD) w zakresie od {today} do {week_later}: ")
                 try:
-                    forecast_days = int(input("Wpisz liczbę dni prognozy (forecast days) maksymalna liczba dni to 16: "))
-                    if forecast_days > 0:
-                        break  # Wyjdź z pętli, jeśli wartość jest poprawna
+                    selected_date = datetime.strptime(date_input, "%Y-%m-%d").date()
+                    if today <= selected_date <= week_later:
+                        break
                     else:
-                        print("Liczba dni prognozy musi być większa od 0.")
+                        print(f"Data musi być w zakresie od {today} do {week_later}.")
                 except ValueError:
-                    print("Niepoprawny format. Wprowadź liczbę całkowitą.")
+                    print("Niepoprawny format daty. Wprowadź datę w formacie RRRR-MM-DD.")
+
+            # Pobranie godziny
+            while True:
+                hour_input = input("Wpisz godzinę prognozy (00-23): ")
+                if hour_input.isdigit() and 0 <= int(hour_input) <= 23:
+                    selected_hour = f"T{hour_input.zfill(2)}:00"
+                    break
+                else:
+                    print("Godzina musi być liczbą od 0 do 23.")
 
             # Wywołanie funkcji do wygenerowania URL
-            url = get_weather_data(latitude, longitude, timezone, forecast_days)
+            url = get_weather_data(latitude, longitude, timezone, selected_date)
             print("Skonstruowany URL:", url)
 
             # Pobranie danych pogodowych
             weather_data = fetch_weather_data(url)
             if weather_data:
-                # Informacje o wprowadzonych danych
                 print(f"Wprowadzono współrzędne: szerokość = {latitude}, długość = {longitude}")
                 print(f"Wprowadzona strefa czasowa: {timezone}")
 
-                print("Pogoda na wybrany okres:")
-                format_response(weather_data)
+                print("Pogoda dla wybranej daty i godziny:")
+                format_response(weather_data, selected_hour)
 
         elif user_input == '0':
             print("Zamykanie aplikacji.")
             break
         else:
             print("Nieprawidłowy wybór. Wpisz 1 lub 0.")
-
 
 if __name__ == "__main__":
     main()
