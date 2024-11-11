@@ -1,0 +1,25 @@
+# Ignorowanie plików logów
+*.log
+*.tmp  
+
+# Ignorowanie folderów z plikami tymczasowymi
+temp/
+build/
+
+# Ignorowanie plików Python compiled
+__pycache__/
+*.pyc
+
+# Ignorowanie wirtualnego środowiska (virtual environment)
+.venv/
+env/
+venv/
+
+# Ignorowanie plików konfiguracyjnych IDE
+.idea/
+.vscode/
+
+# Ignorowanie plików systemowych
+.DS_Store  # macOS
+Thumbs.db  # Windows
+
